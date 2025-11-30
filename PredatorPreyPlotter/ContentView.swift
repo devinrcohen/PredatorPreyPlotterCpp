@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Charts
 
 struct ContentView: View {
     @State private var alphaText = "0.66"
@@ -43,33 +44,66 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Plot") {
+                    if points.isEmpty {
+                        Text("Run a simulation to see the plot.")
+                            .foregroundStyle(Color.secondary)
+                    } else { // close: if points.isempty
+                        Chart {
+                            // Prey Line
+                            ForEach(points) { p in
+                                LineMark(
+                                    x: .value("Time", p.t),
+                                    y: .value("Prey Population", p.prey),
+                                )
+                                .foregroundStyle(by: .value("Species", "Prey"))
+                            }
+                            
+                            // Predator Line
+                            ForEach(points) { p in
+                                LineMark(
+                                    x: .value("Time", p.t),
+                                    y: .value("Predator Population", p.predator),
+                                )
+                                .foregroundStyle(by: .value("Species", "Predator"))
+                            }
+                        }
+                        .chartForegroundStyleScale([
+                            "Prey": .green,
+                            "Predator": .orange
+                        ])
+                        .chartLegend(.visible)
+                        .frame(height: 250)
+                    }
+                }
+                
                 Section {
                     DisclosureGroup(
                         isExpanded: $showCoefficients,
                         content: {
                             HStack {
-                                Text("α")
+                                Text("α = ")
                                     .fontWeight(.bold)
                                 TextField("alpha", text: $alphaText)
                                     .keyboardType(.decimalPad)
                                     .focused($focusedField, equals: .alpha)
                             }
                             HStack {
-                                Text("β")
+                                Text("β = ")
                                     .fontWeight(.bold)
                                 TextField("beta", text: $betaText)
                                     .keyboardType(.decimalPad)
                                     .focused($focusedField, equals: .beta)
                             }
                             HStack {
-                                Text("γ")
+                                Text("γ = ")
                                     .fontWeight(.bold)
                                 TextField("gamma", text: $gammaText)
                                     .keyboardType(.decimalPad)
                                     .focused($focusedField, equals: .gamma)
                             }
                             HStack {
-                                Text("δ")
+                                Text("δ = ")
                                     .fontWeight(.bold)
                                 TextField("delta", text: $deltaText)
                                     .keyboardType(.decimalPad)
@@ -85,14 +119,14 @@ struct ContentView: View {
                         isExpanded: $showInitialConditions,
                         content: {
                             HStack {
-                                Text("x₀")
+                                Text("prey₀ = ")
                                     .fontWeight(.bold)
                                 TextField("x0", text: $x0Text)
                                     .keyboardType(.decimalPad)
                                     .focused($focusedField, equals: .x0)
                             }
                             HStack {
-                                Text("y₀")
+                                Text("predator₀ = ")
                                     .fontWeight(.bold)
                                 TextField("y0", text: $y0Text)
                                     .keyboardType(.decimalPad)
@@ -135,35 +169,35 @@ struct ContentView: View {
                 }
                 .buttonStyle(.borderedProminent)
                 
-                Section("Sample Output") {
-                    if points.isEmpty {
-                        Text("Press Solve to compute.")
-                            .foregroundStyle(Color.secondary)
-                            .contentShape(Rectangle())
-                            .onTapGesture { focusedField = nil }
-                    } else {
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 4) {
-                                ForEach(points.prefix(50)) { p in
-                                        Text(
-                                            String(
-                                                format: "t = %.2f prey = %.3f pred = %.3f",
-                                                p.t, p.prey, p.predator
-                                            )
-                                        )
-                                        .font(.system(.body, design: .monospaced))
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture { focusedField = nil }
-                        
-                        Text("Showing first \(min(points.count, 50)) of \(points.count) points")
-                            .font(.footnote)
-                            .foregroundStyle(Color.secondary)
-                    }
-                }
+//                Section("Sample Output") {
+//                    if points.isEmpty {
+//                        Text("Press Solve to compute.")
+//                            .foregroundStyle(Color.secondary)
+//                            .contentShape(Rectangle())
+//                            .onTapGesture { focusedField = nil }
+//                    } else {
+//                        ScrollView {
+//                            VStack(alignment: .leading, spacing: 4) {
+//                                ForEach(points.prefix(50)) { p in
+//                                        Text(
+//                                            String(
+//                                                format: "t = %.2f prey = %.3f pred = %.3f",
+//                                                p.t, p.prey, p.predator
+//                                            )
+//                                        )
+//                                        .font(.system(.body, design: .monospaced))
+//                                }
+//                            }
+//                            .padding(.vertical, 4)
+//                        }
+//                        .contentShape(Rectangle())
+//                        .onTapGesture { focusedField = nil }
+//                        
+//                        Text("Showing first \(min(points.count, 50)) of \(points.count) points")
+//                            .font(.footnote)
+//                            .foregroundStyle(Color.secondary)
+//                    }
+//                }
             }
             .navigationTitle("Predator-Prey")
             .scrollDismissesKeyboard(.interactively)
