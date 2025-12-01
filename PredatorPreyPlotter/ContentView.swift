@@ -7,6 +7,7 @@
 
 import SwiftUI
 import Charts
+import UIKit
 
 struct ContentView: View {
     @State private var alphaText = "0.66"
@@ -23,6 +24,7 @@ struct ContentView: View {
     @State private var showCoefficients = false
     @State private var showInitialConditions = false
     @State private var showIntegration = false
+    @State private var showPhasePlot = false
     
     enum Field: Hashable {
         case alpha, beta, gamma, delta
@@ -50,31 +52,59 @@ struct ContentView: View {
                             .foregroundStyle(Color.secondary)
                     } else { // close: if points.isempty
                         Chart {
-                            // Prey Line
-                            ForEach(points) { p in
-                                LineMark(
-                                    x: .value("Time", p.t),
-                                    y: .value("Prey Population", p.prey),
-                                )
-                                .foregroundStyle(by: .value("Species", "Prey"))
-                            }
-                            
-                            // Predator Line
-                            ForEach(points) { p in
-                                LineMark(
-                                    x: .value("Time", p.t),
-                                    y: .value("Predator Population", p.predator),
-                                )
-                                .foregroundStyle(by: .value("Species", "Predator"))
+                            if !showPhasePlot {
+                                // Prey Line
+                                ForEach(points) { p in
+                                    LineMark(
+                                        x: .value("Time", p.t),
+                                        y: .value("Prey Population", p.prey),
+                                    )
+                                    .foregroundStyle(by: .value("Species", "Prey"))
+                                }
+                                
+                                // Predator Line
+                                ForEach(points) { p in
+                                    LineMark(
+                                        x: .value("Time", p.t),
+                                        y: .value("Predator Population", p.predator),
+                                    )
+                                    .foregroundStyle(by: .value("Species", "Predator"))
+                                }
+                            } else {
+                                // Phase Plot
+                                ForEach(points) { p in
+                                    LineMark(
+                                        x: .value("Prey", p.prey),
+                                        y: .value("Predator", p.predator)
+                                    )
+                                    .foregroundStyle(.red)
+                                }
                             }
                         }
                         .chartForegroundStyleScale([
                             "Prey": .green,
                             "Predator": .orange
                         ])
-                        .chartLegend(.visible)
+                        .chartLegend(showPhasePlot ? .hidden : .visible)
+                        .chartXAxisLabel(showPhasePlot ? "Prey Population" : "Time")
+                        .chartYAxisLabel{
+                            if showPhasePlot {
+                                Text("Predator Population")
+                                    .rotationEffect(Angle(degrees: 0))
+                            } else {
+                                Text("Population")
+                            }
+                        }
                         .frame(height: 250)
                     }
+                    Toggle(isOn: $showPhasePlot) {
+                        Text(showPhasePlot ? "Phase Plot" : "Time Plot")
+                    }
+                    Button("Plot") {
+                        //print("Solve Tapped")
+                        solve()
+                    }
+                    .buttonStyle(.borderedProminent)
                 }
                 
                 Section {
@@ -84,30 +114,22 @@ struct ContentView: View {
                             HStack {
                                 Text("α = ")
                                     .fontWeight(.bold)
-                                TextField("alpha", text: $alphaText)
-                                    .keyboardType(.decimalPad)
-                                    .focused($focusedField, equals: .alpha)
+                                SelectAllNumberField(placeholder: "alpha", text: $alphaText)
                             }
                             HStack {
                                 Text("β = ")
                                     .fontWeight(.bold)
-                                TextField("beta", text: $betaText)
-                                    .keyboardType(.decimalPad)
-                                    .focused($focusedField, equals: .beta)
+                                SelectAllNumberField(placeholder: "beta", text: $betaText)
                             }
                             HStack {
                                 Text("γ = ")
                                     .fontWeight(.bold)
-                                TextField("gamma", text: $gammaText)
-                                    .keyboardType(.decimalPad)
-                                    .focused($focusedField, equals: .gamma)
+                                SelectAllNumberField(placeholder: "gamma", text: $gammaText)
                             }
                             HStack {
                                 Text("δ = ")
                                     .fontWeight(.bold)
-                                TextField("delta", text: $deltaText)
-                                    .keyboardType(.decimalPad)
-                                    .focused($focusedField, equals: .delta)
+                                SelectAllNumberField(placeholder: "delta", text: $deltaText)
                             }
                         },
                         label: {
@@ -121,16 +143,18 @@ struct ContentView: View {
                             HStack {
                                 Text("prey₀ = ")
                                     .fontWeight(.bold)
-                                TextField("x0", text: $x0Text)
-                                    .keyboardType(.decimalPad)
-                                    .focused($focusedField, equals: .x0)
+//                                TextField("x0", text: $x0Text)
+//                                    .keyboardType(.decimalPad)
+//                                    .focused($focusedField, equals: .x0)
+                                SelectAllNumberField(placeholder: "x0", text: $x0Text)
                             }
                             HStack {
                                 Text("predator₀ = ")
                                     .fontWeight(.bold)
-                                TextField("y0", text: $y0Text)
-                                    .keyboardType(.decimalPad)
-                                    .focused($focusedField, equals: .y0)
+//                                TextField("y0", text: $y0Text)
+//                                    .keyboardType(.decimalPad)
+//                                    .focused($focusedField, equals: .y0)
+                                SelectAllNumberField(placeholder: "y0", text: $y0Text)
                             }
                         },
                         label: {
@@ -144,16 +168,18 @@ struct ContentView: View {
                             HStack {
                                 Text("Δt")
                                     .fontWeight(.bold)
-                                TextField("dt", text: $dtText)
-                                    .keyboardType(.decimalPad)
-                                    .focused($focusedField, equals: .dt)
+//                                TextField("dt", text: $dtText)
+//                                    .keyboardType(.decimalPad)
+//                                    .focused($focusedField, equals: .dt)
+                                SelectAllNumberField(placeholder: "dt", text: $dtText)
                             }
                             HStack {
                                 Text("Steps")
                                     .fontWeight(.bold)
-                                TextField("steps", text: $stepsText)
-                                    .keyboardType(.numberPad)
-                                    .focused($focusedField, equals: .steps)
+//                                TextField("steps", text: $stepsText)
+//                                    .keyboardType(.numberPad)
+//                                    .focused($focusedField, equals: .steps)
+                                SelectAllNumberField(placeholder: "steps", text: $stepsText)
                             }
                         },
                         label: {
@@ -163,41 +189,11 @@ struct ContentView: View {
                     )
                 }
                 
-                Button("Solve") {
-                    print("Solve Tapped")
-                    solve()
-                }
-                .buttonStyle(.borderedProminent)
-                
-//                Section("Sample Output") {
-//                    if points.isEmpty {
-//                        Text("Press Solve to compute.")
-//                            .foregroundStyle(Color.secondary)
-//                            .contentShape(Rectangle())
-//                            .onTapGesture { focusedField = nil }
-//                    } else {
-//                        ScrollView {
-//                            VStack(alignment: .leading, spacing: 4) {
-//                                ForEach(points.prefix(50)) { p in
-//                                        Text(
-//                                            String(
-//                                                format: "t = %.2f prey = %.3f pred = %.3f",
-//                                                p.t, p.prey, p.predator
-//                                            )
-//                                        )
-//                                        .font(.system(.body, design: .monospaced))
-//                                }
-//                            }
-//                            .padding(.vertical, 4)
-//                        }
-//                        .contentShape(Rectangle())
-//                        .onTapGesture { focusedField = nil }
-//                        
-//                        Text("Showing first \(min(points.count, 50)) of \(points.count) points")
-//                            .font(.footnote)
-//                            .foregroundStyle(Color.secondary)
-//                    }
+//                Button("Solve") {
+//                    print("Solve Tapped")
+//                    solve()
 //                }
+//                .buttonStyle(.borderedProminent)
             }
             .navigationTitle("Predator-Prey")
             .scrollDismissesKeyboard(.interactively)
@@ -225,14 +221,14 @@ struct ContentView: View {
         let steps = Int(stepsText) ?? 200
         
         let dict = LVBridge.solve(withAlpha: alpha, beta: beta, gamma: gamma, delta: delta, x0: x0, y0: y0, dt: dt, steps: Int32(steps))
-        print("dict from LVBridge: \(dict)")
+        //print("dict from LVBridge: \(dict)")
         
         guard
             let tArr = dict["t"],
             let preyArr = dict["prey"],
             let predArr = dict["predator"]
         else {
-            print("Guard failed: keys missing in dict")
+            //print("Guard failed: keys missing in dict")
             points = []
             return
         }
@@ -249,6 +245,54 @@ struct ContentView: View {
         }
         
         points = newPoints
+    }
+}
+
+struct SelectAllNumberField: UIViewRepresentable {
+    var placeholder: String
+    @Binding var text: String
+
+    class Coordinator: NSObject, UITextFieldDelegate {
+        var parent: SelectAllNumberField
+
+        init(_ parent: SelectAllNumberField) {
+            self.parent = parent
+        }
+
+        @objc func textDidChange(_ textField: UITextField) {
+            parent.text = textField.text ?? ""
+        }
+
+        func textFieldDidBeginEditing(_ textField: UITextField) {
+            // Select all text when the user starts editing, like Slopes
+            DispatchQueue.main.async {
+                textField.selectAll(nil)
+            }
+        }
+    }
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(self)
+    }
+
+    func makeUIView(context: Context) -> UITextField {
+        let tf = UITextField(frame: .zero)
+        tf.placeholder = placeholder
+        tf.text = text
+        tf.keyboardType = .decimalPad
+        tf.borderStyle = .roundedRect
+
+        tf.delegate = context.coordinator
+        tf.addTarget(context.coordinator,
+                     action: #selector(Coordinator.textDidChange(_:)),
+                     for: .editingChanged)
+        return tf
+    }
+
+    func updateUIView(_ uiView: UITextField, context: Context) {
+        if uiView.text != text {
+            uiView.text = text
+        }
     }
 }
 
